@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS medicamentos (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    uso_controlado BOOLEAN NOT NULL,
+    localizacao VARCHAR(500) NOT NULL
+);
