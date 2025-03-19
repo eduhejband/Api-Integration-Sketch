@@ -6,6 +6,7 @@ import com.example.medicamentos_service.dao.MedicamentoDAO;
 import com.example.medicamentos_service.dto.MedicamentoDTO;
 import com.example.medicamentos_service.mapper.MedicamentoMapper;
 import com.example.medicamentos_service.model.Medicamento;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,12 +25,10 @@ public class MedicamentoService {
         this.nominationClient = nominationClient;
     }
 
+    @RateLimiter(name = "medicamentoService", fallbackMethod = "fallbackMethod")
     public MedicamentoDTO salvar(MedicamentoDTO medicamentoDTO) {
         Medicamento medicamento = medicamentoMapper.toEntity(medicamentoDTO);
-
-        // Chamando a API da Nominatim para buscar a localização
         List<NominatimResponse> localizacao = nominationClient.buscarLocalizacao(medicamentoDTO.localizacao(), "json");
-
 
         if (localizacao.isEmpty()) {
             throw new RuntimeException("Localização não encontrada para o medicamento: " + medicamentoDTO.nome());
@@ -39,12 +38,13 @@ public class MedicamentoService {
         return medicamentoMapper.toDTO(medicamento);
     }
 
-
+    @RateLimiter(name = "medicamentoService", fallbackMethod = "fallbackMethod")
     public Optional<MedicamentoDTO> buscarPorId(Long id) {
         return medicamentoDAO.buscarPorId(id)
                 .map(medicamentoMapper::toDTO);
     }
 
+    @RateLimiter(name = "medicamentoService", fallbackMethod = "fallbackMethod")
     public List<MedicamentoDTO> buscarTodos() {
         return medicamentoDAO.buscarTodos()
                 .stream()
@@ -52,6 +52,7 @@ public class MedicamentoService {
                 .collect(Collectors.toList());
     }
 
+    @RateLimiter(name = "medicamentoService", fallbackMethod = "fallbackMethod")
     public Optional<MedicamentoDTO> atualizar(Long id, MedicamentoDTO medicamentoDTO) {
         Optional<Medicamento> medicamentoExistente = medicamentoDAO.buscarPorId(id);
 
@@ -64,7 +65,16 @@ public class MedicamentoService {
         return Optional.empty();
     }
 
+    @RateLimiter(name = "medicamentoService", fallbackMethod = "fallbackMethod")
     public boolean deletar(Long id) {
         return medicamentoDAO.deletar(id);
+    }
+
+    private MedicamentoDTO fallbackMethod(MedicamentoDTO medicamentoDTO, Throwable t) {
+        throw new RuntimeException("Muitas requisições! Aguarde e tente novamente.");
+    }
+
+    private Optional<MedicamentoDTO> fallbackMethod(Long id, Throwable t) {
+        throw new RuntimeException("Muitas requisições! Aguarde e tente novamente.");
     }
 }
